@@ -1,19 +1,29 @@
 import db from "../config/db.js";
 
-// Get all approved materials + pending materials for CR panel
+// Get all approved materials (with optional course filter) + pending materials for CR panel
 export const getResources = async (req, res) => {
   try {
     const role = req.user.role;
+    const { course_code } = req.query;
 
-    // Fetch all approved materials
-    const [materials] = await db.execute(
-      `SELECT m.*, u.name as uploader_name, sc.course_title 
-             FROM materials m 
-             LEFT JOIN users u ON m.uploaded_by = u.id 
-             LEFT JOIN semester_courses sc ON m.course_code = sc.course_code
-             WHERE m.status = 'approved'
-             ORDER BY m.created_at DESC`,
-    );
+    let query = `
+            SELECT m.*, u.name as uploader_name, sc.course_title 
+            FROM materials m 
+            LEFT JOIN users u ON m.uploaded_by = u.id 
+            LEFT JOIN semester_courses sc ON m.course_code = sc.course_code
+            WHERE m.status = 'approved'
+        `;
+    let queryParams = [];
+
+    if (course_code && course_code !== "all") {
+      query += ` AND m.course_code = ?`;
+      queryParams.push(course_code);
+    }
+
+    query += ` ORDER BY m.created_at DESC`;
+
+    // Fetch filtered/all approved materials
+    const [materials] = await db.execute(query, queryParams);
 
     // Fetch pending materials for CR/Admin review
     let pendingMaterials = [];
@@ -42,7 +52,6 @@ export const uploadResource = async (req, res) => {
     const userId = req.user.id;
     const role = req.user.role;
 
-    // CRs and Admins bypass approval; students require approval
     const status = role === "cr" || role === "admin" ? "approved" : "pending";
     const msg =
       status === "approved"

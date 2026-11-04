@@ -19,7 +19,7 @@ export function Topbar() {
   header.className = "topbar";
   header.innerHTML = `
         <div class="search-container">
-            <input type="text" placeholder="Search courses, notices, materials, projects...">
+            <input type="text" id="globalSearchInput" placeholder="Search courses, notices, materials, projects...">
         </div>
         <div class="topbar-right">
             <button id="dashboardThemeToggle" class="theme-toggle-btn" title="Toggle Theme">🌓</button>
@@ -28,15 +28,31 @@ export function Topbar() {
                 <img src="${avatarUrl}" alt="Profile" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); background: #eee;">
                 <div class="profile-badge">
                     <h4 style="margin: 0; font-size: 14px;">${user.name}</h4>
-                    <p style="margin: 0; font-size: 11px;">${user.department || "CSE"} • ${user.batch || "3rd Year"}</p>
+                    <p style="margin: 0; font-size: 11px; color: var(--text-muted);">${user.department || "CSE"} | ${user.batch || "3rd Year"}</p>
                 </div>
             </div>
         </div>
     `;
 
   setTimeout(() => {
+    // Theme Toggle Handler
     const btn = header.querySelector("#dashboardThemeToggle");
     if (btn) btn.onclick = () => toggleTheme();
+
+    // Global Search Handler (Triggers search modal on Enter)
+    const searchInput = header.querySelector("#globalSearchInput");
+    if (searchInput) {
+      searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+          const query = searchInput.value.trim();
+          if (query) {
+            window.dispatchEvent(
+              new CustomEvent("globalSearch", { detail: { query } }),
+            );
+          }
+        }
+      });
+    }
   }, 0);
 
   return header;

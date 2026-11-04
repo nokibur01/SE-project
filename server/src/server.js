@@ -9,6 +9,7 @@ import eventRoutes from "./routes/eventRoutes.js";
 import resourceRoutes from "./routes/resourceRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import searchRoutes from "./routes/searchRoutes.js";
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use("/api/events", eventRoutes);
 app.use("/api/resources", resourceRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/search", searchRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
