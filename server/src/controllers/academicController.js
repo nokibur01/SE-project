@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import { createNotification } from "./notificationController.js";
 
 export const getBatchAcademicData = async (req, res) => {
   try {
@@ -43,6 +44,11 @@ export const addCourse = async (req, res) => {
         department.trim(),
         batch.trim(),
       ],
+    );
+    await createNotification(
+      `New Course Added (${course_code})`,
+      `Title: ${course_title} has been added.`,
+      "course",
     );
     res
       .status(201)

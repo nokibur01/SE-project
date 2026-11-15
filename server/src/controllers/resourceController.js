@@ -1,4 +1,6 @@
 import db from "../config/db.js";
+import { createNotification } from "./notificationController.js";
+
 
 // Get all approved materials (with optional course filter) + pending materials for CR panel
 export const getResources = async (req, res) => {
@@ -68,6 +70,12 @@ export const uploadResource = async (req, res) => {
         status,
         userId,
       ],
+    );
+
+    await createNotification(
+      `New Resource Uploaded (${course_code})`,
+      `Title: ${title} has been uploaded.`,
+      "resource",
     );
 
     res.status(201).json({ success: true, message: msg });

@@ -1,4 +1,5 @@
 import db from "../config/db.js";
+import { createNotification } from "./notificationController.js";
 
 // Get all events that have not passed their due date
 export const getEvents = async (req, res) => {
@@ -76,12 +77,16 @@ export const approveEvent = async (req, res) => {
       eventId,
     ]);
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Event approved and published successfully!",
-      });
+    await createNotification(
+      `Event Approved (${title})`,
+      `Title: ${title} has been approved.`,
+      "event",
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Event approved and published successfully!",
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -1,47 +1,77 @@
 export function Sidebar(navigate, currentView) {
-  const aside = document.createElement("aside");
-  aside.className = "sidebar";
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+  const isAdmin = user.role === "admin";
 
-  const user = JSON.parse(localStorage.getItem("user")) || { role: "student" };
-  const isCRorAdmin = user.role === "cr" || user.role === "admin";
+  const sidebar = document.createElement("aside");
+  sidebar.className = "sidebar";
 
-  aside.innerHTML = `
-        <div class="sidebar-top">
-            <div class="logo-area">
-                <h2>BatchHub</h2>
-            </div>
-            <div class="nav-menu">
-                <a href="#" class="nav-link ${currentView === "dashboard" ? "active" : ""}" data-view="dashboard">Dashboard</a>
-                <a href="#" class="nav-link ${currentView === "resources" ? "active" : ""}" data-view="resources">Resources</a>
-                <a href="#" class="nav-link ${currentView === "members" ? "active" : ""}" data-view="members">Members</a>
-                <a href="#" class="nav-link ${currentView === "events" ? "active" : ""}" data-view="events">Events</a>
-                <a href="#" class="nav-link ${currentView === "projects" ? "active" : ""}" data-view="projects">Projects & Groups</a>
-                <a href="#" class="nav-link ${currentView === "tasks" ? "active" : ""}" data-view="tasks">Tasks & Deadlines</a>
-                ${isCRorAdmin ? `<a href="#" class="nav-link ${currentView === "cr-panel" ? "active" : ""}" data-view="cr-panel" style="color: #2e7d32; font-weight: bold; margin-top: 10px; border: 1px dashed #2e7d32; border-radius: 6px;">⚙️ CR Panel</a>` : ""}
-            </div>
-        </div>
-        <div class="sidebar-footer">
-            <a href="#" class="nav-link ${currentView === "profile" ? "active" : ""}" data-view="profile">Profile</a>
-            <a href="#" class="nav-link ${currentView === "settings" ? "active" : ""}" data-view="settings">Settings</a>
-            <a href="#" class="nav-link ${currentView === "help" ? "active" : ""}" data-view="help">Help & Support</a>
-            <button id="logoutBtn" class="logout-btn">Logout</button>
-        </div>
-    `;
+  let menuItems = [];
+
+  if (isAdmin) {
+    menuItems = [
+      { name: "Admin Master Overview", view: "admin-master", icon: "🛡️" },
+      { name: "Settings", view: "settings", icon: "⚙️" },
+      { name: "Help & Support", view: "help", icon: "❓" },
+    ];
+  } else {
+    menuItems = [
+      { name: "Dashboard", view: "dashboard", icon: "🏠" },
+      { name: "Resources", view: "resources", icon: "📚" },
+      { name: "Tasks & Deadlines", view: "tasks", icon: "📋" },
+      { name: "Projects", view: "projects", icon: "📁" },
+      { name: "Events", view: "events", icon: "📅" },
+      { name: "Members", view: "members", icon: "👤" },
+      { name: "Profile", view: "profile", icon: "⚙️" },
+      { name: "Settings", view: "settings", icon: "🛠️" },
+      { name: "Help & Support", view: "help", icon: "❓" },
+      ...(user.role === "cr"
+        ? [{ name: "CR Approval Panel", view: "cr-panel", icon: "⭐" }]
+        : []),
+    ];
+  }
+
+  sidebar.innerHTML = `
+    <div class="sidebar-brand">
+      <h3>BatchHub</h3>
+      <small style="color: var(--text-muted); font-size: 11px;">${isAdmin ? "System Admin" : "CSE Department"}</small>
+    </div>
+    <ul class="sidebar-menu" style="list-style: none; padding: 0; margin-top: 20px;">
+      ${menuItems
+        .map(
+          (item) => `
+        <li style="margin-bottom: 5px;">
+          <button data-view="${item.view}" style="width: 100%; text-align: left; padding: 10px 15px; background: ${currentView === item.view ? "var(--primary-color)" : "transparent"}; color: ${currentView === item.view ? "white" : "var(--text-color)"}; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500;">
+            <span>${item.icon}</span> ${item.name}
+          </button>
+        </li>
+      `,
+        )
+        .join("")}
+    </ul>
+    <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border-color);">
+      <button id="logoutBtn" style="width: 100%; text-align: left; padding: 10px 15px; background: rgba(198, 40, 40, 0.1); color: #c62828; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold;">
+        🚪 Logout
+      </button>
+    </div>
+  `;
 
   setTimeout(() => {
-    aside.querySelectorAll("[data-view]").forEach((link) => {
-      link.onclick = (e) => {
-        e.preventDefault();
-        navigate(link.getAttribute("data-view"));
+    sidebar.querySelectorAll(".sidebar-menu button").forEach((btn) => {
+      btn.onclick = () => {
+        const view = btn.getAttribute("data-view");
+        navigate(view);
       };
     });
 
-    aside.querySelector("#logoutBtn").onclick = () => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      navigate("login");
-    };
+    const logoutBtn = sidebar.querySelector("#logoutBtn");
+    if (logoutBtn) {
+      logoutBtn.onclick = () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        navigate("login");
+      };
+    }
   }, 0);
 
-  return aside;
+  return sidebar;
 }

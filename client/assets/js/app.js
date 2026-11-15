@@ -11,7 +11,10 @@ import { initTheme, toggleTheme } from "./theme.js";
 import { ResourcesView } from "../../views/resourcesView.js";
 import { ProjectsView } from "../../views/projectsView.js";
 import { TasksView } from "../../views/tasksView.js";
+import { SettingsView } from "../../views/settingsView.js";
+import { HelpView } from "../../views/helpView.js";
 import { api } from "./api.js";
+import { AdminMasterView } from "../../views/adminMasterView.js";
 
 function navigate(viewName) {
   const root = document.getElementById("app");
@@ -60,6 +63,12 @@ function navigate(viewName) {
       contentWrapper.appendChild(ProjectsView());
     } else if (viewName === "tasks") {
       contentWrapper.appendChild(TasksView());
+    } else if (viewName === "admin-master") {
+      contentWrapper.appendChild(AdminMasterView());
+    } else if (viewName === "settings") {
+      contentWrapper.appendChild(SettingsView());
+    } else if (viewName === "help") {
+      contentWrapper.appendChild(HelpView());
     } else {
       contentWrapper.appendChild(DashboardView());
     }
@@ -73,15 +82,28 @@ function navigate(viewName) {
 function init() {
   initTheme();
   const token = localStorage.getItem("token");
-  navigate(token ? "dashboard" : "login");
+  const user = JSON.parse(localStorage.getItem("user")) || {};
+
+  if (!token) {
+    navigate("login");
+  } else {
+    if (user.role === "admin") {
+      navigate("admin-master");
+    } else {
+      navigate("dashboard");
+    }
+  }
 }
 
-// Global Search Event Handler (Add this in app.js or layout init)
+// Global Search Event Handler with Category Support
 window.addEventListener("globalSearch", async (e) => {
-  const query = e.detail.query;
+  const { query, category } = e.detail;
   try {
     const token = localStorage.getItem("token");
-    const res = await api.get(`/search?q=${encodeURIComponent(query)}`, token);
+    const res = await api.get(
+      `/search?q=${encodeURIComponent(query)}&category=${category}`,
+      token,
+    );
 
     if (res.success) {
       showSearchResultsModal(query, res.results);
@@ -92,7 +114,6 @@ window.addEventListener("globalSearch", async (e) => {
 });
 
 function showSearchResultsModal(query, results) {
-  // Remove existing modal if any
   const existing = document.getElementById("searchModalOverlay");
   if (existing) existing.remove();
 
@@ -104,18 +125,20 @@ function showSearchResultsModal(query, results) {
   const totalResults =
     (results.materials?.length || 0) +
     (results.tasks?.length || 0) +
-    (results.projects?.length || 0);
+    (results.projects?.length || 0) +
+    (results.events?.length || 0) +
+    (results.members?.length || 0);
 
   overlay.innerHTML = `
-        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+        <div style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 90%; max-width: 650px; max-height: 80vh; overflow-y: auto; padding: 25px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 15px;">
                 <h3 style="color: var(--primary-color); font-size: 18px;">Search Results for "${query}"</h3>
                 <button id="closeSearchModal" style="background: none; border: none; font-size: 18px; cursor: pointer; color: var(--text-color);">✕</button>
             </div>
             
-            ${totalResults === 0 ? `<p style="color: var(--text-muted); text-align: center; padding: 20px;">No matches found across resources, tasks, or projects.</p>` : ""}
+            ${totalResults === 0 ? `<p style="color: var(--text-muted); text-align: center; padding: 20px;">No matches found.</p>` : ""}
 
-            <!-- Materials Section -->
+            <!-- Materials -->
             ${
               results.materials?.length > 0
                 ? `
@@ -136,7 +159,7 @@ function showSearchResultsModal(query, results) {
                 : ""
             }
 
-            <!-- Tasks Section -->
+            <!-- Tasks -->
             ${
               results.tasks?.length > 0
                 ? `
@@ -157,18 +180,58 @@ function showSearchResultsModal(query, results) {
                 : ""
             }
 
-            <!-- Projects Section -->
+            <!-- Projects -->
             ${
               results.projects?.length > 0
                 ? `
                 <h4 style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px;">📁 Projects (${results.projects.length})</h4>
-                <div style="display: flex; flex-direction: column; gap: 8px;">
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
                     ${results.projects
                       .map(
                         (p) => `
                         <div style="background: var(--bg-color); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                             <div><strong>${p.title}</strong> <small style="color: var(--text-muted);">(${p.tech_stack})</small></div>
                             <a href="${p.repo_url}" target="_blank" style="font-size: 12px; color: var(--primary-color); font-weight: bold; text-decoration: none;">GitHub</a>
+                        </div>
+                    `,
+                      )
+                      .join("")}
+                </div>
+            `
+                : ""
+            }
+
+            <!-- Events -->
+            ${
+              results.events?.length > 0
+                ? `
+                <h4 style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px;">📅 Events (${results.events.length})</h4>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+                    ${results.events
+                      .map(
+                        (ev) => `
+                        <div style="background: var(--bg-color); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <strong>${ev.title}</strong> — <small style="color: var(--text-muted);">${ev.location}</small>
+                        </div>
+                    `,
+                      )
+                      .join("")}
+                </div>
+            `
+                : ""
+            }
+
+            <!-- Members -->
+            ${
+              results.members?.length > 0
+                ? `
+                <h4 style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px;">👤 Members (${results.members.length})</h4>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    ${results.members
+                      .map(
+                        (u) => `
+                        <div style="background: var(--bg-color); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                            <div><strong>${u.name}</strong> (${u.student_id}) <br><small style="color: var(--text-muted);">Batch: ${u.batch} | Skills: ${u.skills || "N/A"}</small></div>
                         </div>
                     `,
                       )
