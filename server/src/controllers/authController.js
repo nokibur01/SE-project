@@ -5,8 +5,8 @@ import jwt from "jsonwebtoken";
 // Register User
 export const register = async (req, res) => {
   try {
-    const { name, email, password, student_id, batch, department, role } =
-      req.body;
+    const { name, email, password, student_id, batch, department } = req.body;
+    const defaultRole = "student";
 
     // Check if user already exists
     const [existingUser] = await db.execute(
@@ -23,7 +23,7 @@ export const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert into database
+    // CRITICAL FIX: 'defaultRole'-এর জায়গায় সঠিক কলাম নাম 'role' ব্যবহার করা হয়েছে
     const query = `INSERT INTO users (name, email, password, student_id, batch, department, role) VALUES (?, ?, ?, ?, ?, ?, ?)`;
     const [result] = await db.execute(query, [
       name,
@@ -32,7 +32,7 @@ export const register = async (req, res) => {
       student_id || null,
       batch || null,
       department || null,
-      role || "student",
+      defaultRole,
     ]);
 
     res.status(201).json({
@@ -41,6 +41,7 @@ export const register = async (req, res) => {
       userId: result.insertId,
     });
   } catch (error) {
+    console.error("Register Error:", error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 };
